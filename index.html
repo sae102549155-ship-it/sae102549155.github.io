@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>天気予報</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" crossorigin href="/assets/index-B1eHLRJ5.css">
+</head>
+<body>
+
+<h2>地名検索（OpenStreetMap）</h2><br>
+
+<input type="text" id="placeInput" placeholder="地名を入力">
+<button id="searchBtn">検索</button>
+
+<button id="Btn">現在地を取得</button>
+
+<p id="result"></p>
+
+<div id="map"></div>
+
+<h2>天気予報（OpenWeatherMap）</h2>
+
+<div id="myweather"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+document.getElementById("Btn").addEventListener("click", function () {
+    if (!navigator.geolocation) {
+    alert("位置情報に対応していません");
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(function(position) {
+    const currentlat = position.coords.latitude;
+    const currentlon = position.coords.longitude;
+  
+
+   map.setView([currentlat, currentlon], 15);
+   marker.setLatLng([currentlat, currentlon]);
+   document.getElementById("result").innerText =
+          `緯度: ${currentlat} / 経度: ${currentlon}`;
+
+      // OpenWeatherMap API URL
+        const wapikey = 'aabdcb0bb3990d30d2caba1d35887fcc';
+        const myWeather = document.getElementById("myweather");
+        const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${currentlat}&lon=${currentlon}&appid=${wapikey}`;
+
+        // 天気情報取得
+        // fetch APIで同期する
+        fetch(weatherUrl)
+        .then(response => {
+            console.log(response);
+            return response.json();
+        })
+        .then(Weatherdata => {
+            console.log(Weatherdata);
+
+        if (Weatherdata.length === 0) {
+          alert("検索結果が見つかりません");
+          return;
+        }
+
+        // 天気情報表示
+        myWeather.innerHTML = `
+          <h3>現在地の天気</h3>
+          <p>温度: ${(Weatherdata.main.temp - 273.15).toFixed(2)} °C</p>
+          <p>天気: ${Weatherdata.weather[0].description}</p>
+          <p>風速: ${Weatherdata.wind.speed} m/s</p>
+          <p>湿度: ${Weatherdata.main.humidity}%</p>
+          <p>アイコン: <img src="https://openweathermap.org/img/wn/${Weatherdata.weather[0].icon}@2x.png" alt="天気アイコン"></p>
+        `;
+        // 天気アイコン
+        const icon = L.icon({
+            iconUrl: `https://openweathermap.org/img/wn/${Weatherdata.weather[0].icon}@2x.png`,
+            iconSize: [200, 200],
+            iconAnchor: [100, 100],
+            popupAnchor: [0, -50]
+        });
+
+      });
+    });
+});
+
+
+  // 初期座標（東京駅）
+  const defaultLat = 35.681236;
+  const defaultLon = 139.767125;
+
+  document.getElementById("result").innerText =
+          `緯度: ${defaultLat} / 経度: ${defaultLon}`;
+
+  //地図
+  const map = L.map("map").setView([defaultLat, defaultLon], 15);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors"
+  }).addTo(map);
+
+
+  //マーカーを追加する
+  let marker = L.marker([defaultLat, defaultLon],).addTo(map);
+
+  // 検索ボタン処理
+  document.getElementById("searchBtn").addEventListener("click", function () {
+
+    const place = document.getElementById("placeInput").value;
+
+    if (!place) {
+      alert("地名を入力してください");
+      return;
+    }
+
+    // Nominatim API
+    
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}`;
+
+    //fetch APIで同期する
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        console.log(data);
+
+
+        if (data.length === 0) {
+          alert("検索結果が見つかりません");
+          return;
+        }
+
+        const lat = data[0].lat;
+        const lon = data[0].lon;
+
+        // 地図移動
+        map.setView([lat, lon], 15);
+       
+
+        // マーカー移動
+        marker.setLatLng([lat, lon]);
+
+        // 緯度経度表示
+        document.getElementById("result").innerText =
+          `緯度: ${lat} / 経度: ${lon}`;
+
+
+        // OpenWeatherMap API URL
+        const wapikey = 'aabdcb0bb3990d30d2caba1d35887fcc';
+        const myWeather = document.getElementById("myweather");
+        const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${wapikey}`;
+        const iconUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(place)}`;
+
+        // 天気情報取得
+        // fetch APIで同期する
+        fetch(weatherUrl)
+        .then(response => {
+            console.log(response);
+            return response.json();
+        })
+        .then(Weatherdata => {
+            console.log(Weatherdata);
+
+        if (Weatherdata.length === 0) {
+          alert("検索結果が見つかりません");
+          return;
+        }
+
+        // 天気情報表示
+        myWeather.innerHTML = `
+          <h3>${place}の現在の天気</h3>
+          <p>温度: ${(Weatherdata.main.temp - 273.15).toFixed(2)} °C</p>
+          <p>天気: ${Weatherdata.weather[0].description}</p>
+          <p>風速: ${Weatherdata.wind.speed} m/s</p>
+          <p>湿度: ${Weatherdata.main.humidity}%</p>
+          <p>アイコン: <img src="https://openweathermap.org/img/wn/${Weatherdata.weather[0].icon}@2x.png" alt="天気アイコン"></p>
+        `;
+        // 天気アイコン
+        const icon = L.icon({
+            iconUrl: `https://openweathermap.org/img/wn/${Weatherdata.weather[0].icon}@2x.png`,
+            iconSize: [200, 200],
+            iconAnchor: [100, 100],
+            popupAnchor: [0, -50]
+        });
+
+    });
+    });
+
+});
+
+window.addEventListener("load", function () {
+    // 初期表示の天気情報取得
+    const wapikey = 'aabdcb0bb3990d30d2caba1d35887fcc';
+    const myWeather = document.getElementById("myweather");
+    const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${defaultLat}&lon=${defaultLon}&appid=${wapikey}`;
+
+    fetch(weatherUrl)
+        .then(response => response.json())
+        .then(Weatherdata => {
+            console.log(Weatherdata);
+
+            myWeather.innerHTML = `
+                <h3>東京駅の現在の天気</h3>
+                <p>温度: ${(Weatherdata.main.temp - 273.15).toFixed(2)} °C</p>
+                <p>天気: ${Weatherdata.weather[0].description}</p>
+                <p>風速: ${Weatherdata.wind.speed} m/s</p>
+                <p>湿度: ${Weatherdata.main.humidity}%</p>
+                <p>アイコン: <img src="https://openweathermap.org/img/wn/${Weatherdata.weather[0].icon}@2x.png" alt="天気アイコン"></p>
+        `;
+        // 天気アイコン
+
+        const icon = L.icon({
+            iconSize: [200, 200],
+            iconAnchor: [100, 100],
+            popupAnchor: [0, -50]
+        });
+      });
+
+        map.on("click", function (e) {
+            const clicklat = e.latlng.lat;
+            const clicklon = e.latlng.lng;
+
+            // 地図移動
+            map.setView([clicklat, clicklon], 15);
+           
+            // マーカー移動
+            marker.setLatLng([clicklat, clicklon]);
+
+            // 緯度経度表示
+            document.getElementById("result").innerText =
+              `緯度: ${clicklat} / 経度: ${clicklon}`;
+
+              // 天気情報取得
+              const wapikey = 'aabdcb0bb3990d30d2caba1d35887fcc';
+              const myWeather = document.getElementById("myweather");
+              const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${clicklat}&lon=${clicklon}&appid=${wapikey}`;
+
+              fetch(weatherUrl)
+                .then(response => response.json())
+                .then(Weatherdata => {
+                  myWeather.innerHTML = `
+                    <h3>クリックした場所の天気</h3>
+                    <p>温度: ${(Weatherdata.main.temp - 273.15).toFixed(2)} °C</p>
+                    <p>天気: ${Weatherdata.weather[0].description}</p>
+                    <p>風速: ${Weatherdata.wind.speed} m/s</p>
+                    <p>湿度: ${Weatherdata.main.humidity}%</p>
+                    <p>アイコン: <img src="https://openweathermap.org/img/wn/${Weatherdata.weather[0].icon}@2x.png" alt="天気アイコン"></p>
+                  `;
+                });
+
+        
+
+    });
+
+  });
+
+</script>
+
+</body>
+</html>
